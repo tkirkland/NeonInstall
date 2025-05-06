@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "neoninstall"
+version = "0.1.0"
+description = ""
+authors = ["tkirkland <tony+@tonykirkland.net>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+pyyaml = "^6.0"
+questionary = "^2.0.1"
+psutil = "^5.9.5"
+rich = "^13.4.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
