@@ -18,10 +18,7 @@ cmake-build-*/
 .idea/**/mongoSettings.xml
 *.iws
 out/
-.idea_modules/
-atlassian-ide-plugin.xml
-.idea/replstate.xml
-.idea/sonarlint/
+.idea/**/*.iml
 com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
@@ -104,3 +101,4 @@ dmypy.json
 .pyre/
 .pytype/
 cython_debug/
+/.idea/
