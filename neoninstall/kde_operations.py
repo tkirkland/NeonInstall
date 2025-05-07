@@ -40,25 +40,25 @@ def configure_kde_neon(pool_name: str) -> bool:
         bool: True if configuration was successful, False otherwise
     """
     root_path = f"/{pool_name}/ROOT"
-    
+
     try:
         add_kde_neon_repository(root_path)
-        mount_virtual_filesystems(pool_name, root_path)
-        
+        mount_virtual_filesystems(root_path)
+
         # Perform chroot operations
         run_chroot_command(root_path, ["apt-get", "update"])
         install_sddm(root_path)
         configure_sddm_theme(root_path)
         install_kde_packages(root_path)
         enable_sddm_service(root_path)
-        
+
         console.print("[bold green]KDE Neon configured successfully.[/bold green]")
         return True
     except subprocess.CalledProcessError as e:
         console.print(f"[bold red]Error:[/bold red] Failed to configure KDE Neon: {e}")
         return False
     finally:
-        unmount_virtual_filesystems(pool_name, root_path)
+        unmount_virtual_filesystems(root_path)
 
 def add_kde_neon_repository(root_path: str) -> None:
     """Add KDE Neon repositories to apt sources."""
@@ -67,12 +67,12 @@ def add_kde_neon_repository(root_path: str) -> None:
     with open(f"{repo_path}/neon.list", "w") as f:
         f.write(KDE_NEON_REPO)
 
-def mount_virtual_filesystems(pool_name: str, root_path: str) -> None:
+def mount_virtual_filesystems(root_path: str) -> None:
     """Mount virtual filesystems needed for chroot."""
     for mount in MOUNT_POINTS:
         subprocess.run(["mount", "--bind", mount, f"{root_path}{mount}"], check=True)
 
-def unmount_virtual_filesystems(pool_name: str, root_path: str) -> None:
+def unmount_virtual_filesystems(root_path: str) -> None:
     """Unmount virtual filesystems after chroot operations."""
     # Unmount in reverse order for proper dependency handling
     for mount in reversed(MOUNT_POINTS):
