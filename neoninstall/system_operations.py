@@ -19,10 +19,15 @@ def check_prerequisites() -> bool:
     Returns:
         bool: True if all prerequisites are met, False otherwise
     """
-    # Check if running as root
-    if os.geteuid() != 0:
-        console.print("[bold red]Error:[/bold red] This script must be run as root.")
-        return False
+    if platform.system() != "Linux":
+        console.print("[bold red]Error:[/bold red] This script is only compatible with Linux.")
+        sys.exit(1)
+    else:
+
+        # Check if running as root
+        if os.geteuid() != 0:
+            console.print("[bold red]Error:[/bold red] This script must be run as root.")
+            return False
 
     # Check if required commands are available
     required_commands = ["zpool", "zfs", "sgdisk", "mkfs.fat", "rsync", "unsquashfs", "chroot"]
