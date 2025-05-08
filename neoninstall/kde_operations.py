@@ -14,7 +14,7 @@ from rich.console import Console
 console = Console()
 
 # Constants for configuration
-KDE_NEON_REPO = """deb http://archive.neon.kde.org/user focal main
+KDE_NEON_REPO = """deb    http://archive.neon.kde.org/user focal main
 deb-src http://archive.neon.kde.org/user focal main
 """
 

@@ -6,11 +6,15 @@ checking prerequisites and configuring system settings.
 """
 
 import os
+import platform
 import subprocess
+import sys  # Added this line
+
 from rich.console import Console
 
 # Initialize a rich console for colored output
 console = Console()
+
 
 def check_prerequisites() -> bool:
     """
@@ -38,7 +42,8 @@ def check_prerequisites() -> bool:
                 console.print(f"[bold red]Error:[/bold red] Required command '{cmd}' not found.")
                 return False
 
-    return True
+        return True
+
 
 def configure_system_settings(pool_name: str) -> bool:
     """
