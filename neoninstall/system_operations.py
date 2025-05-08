@@ -6,10 +6,9 @@ checking prerequisites and configuring system settings.
 """
 
 import os
+import sys
 import platform
 import subprocess
-import sys  # Added this line
-
 from rich.console import Console
 
 # Initialize a rich console for colored output
@@ -27,7 +26,6 @@ def check_prerequisites() -> bool:
         console.print("[bold red]Error:[/bold red] This script is only compatible with Linux.")
         sys.exit(1)
     else:
-
         # Check if running as root
         if os.geteuid() != 0:
             console.print("[bold red]Error:[/bold red] This script must be run as root.")
