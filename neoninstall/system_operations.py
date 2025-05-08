@@ -29,14 +29,14 @@ def check_prerequisites() -> bool:
             console.print("[bold red]Error:[/bold red] This script must be run as root.")
             return False
 
-    # Check if required commands are available
-    required_commands = ["zpool", "zfs", "sgdisk", "mkfs.fat", "rsync", "unsquashfs", "chroot"]
-    for cmd in required_commands:
-        try:
-            subprocess.run(["which", cmd], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError:
-            console.print(f"[bold red]Error:[/bold red] Required command '{cmd}' not found.")
-            return False
+        # Check if required commands are available
+        required_commands = ["zpool", "zfs", "sgdisk", "mkfs.fat", "rsync", "unsquashfs", "chroot"]
+        for cmd in required_commands:
+            try:
+                subprocess.run(["which", cmd], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except subprocess.CalledProcessError:
+                console.print(f"[bold red]Error:[/bold red] Required command '{cmd}' not found.")
+                return False
 
     return True
 
