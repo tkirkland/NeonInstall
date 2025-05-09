@@ -34,10 +34,12 @@ DEFAULT_NETPLAN_CONFIG = """network:
       dhcp4: true
 """
 
+
 def mount_system_directories(root_path: Path) -> None:
     """Mount system directories for chroot environment."""
     for mount in SYSTEM_MOUNTS:
         subprocess.run(["mount", "--bind", mount, str(root_path / mount[1:])], check=True)
+
 
 def configure_locale(root_path: Path) -> None:
     """Configure system locale settings."""
@@ -49,10 +51,12 @@ def configure_locale(root_path: Path) -> None:
     with open(root_path / "etc/default/locale", "w") as f:
         f.write(f'LANG="{DEFAULT_LOCALE}"\n')
 
+
 def configure_keyboard(root_path: Path) -> None:
     """Configure keyboard layout settings."""
     with open(root_path / "etc/default/keyboard", "w") as f:
         f.write(DEFAULT_KEYBOARD_CONFIG)
+
 
 def configure_timezone(root_path: Path) -> None:
     """Configure system timezone."""
@@ -61,12 +65,14 @@ def configure_timezone(root_path: Path) -> None:
         "ln", "-sf", f"/usr/share/zoneinfo/{DEFAULT_TIMEZONE}", "/etc/localtime"
     ], check=True)
 
+
 def configure_network(root_path: Path) -> None:
     """Configure network settings."""
     netplan_dir = root_path / "etc/netplan"
     os.makedirs(netplan_dir, exist_ok=True)
     with open(netplan_dir / "01-netcfg.yaml", "w") as f:
         f.write(DEFAULT_NETPLAN_CONFIG)
+
 
 def configure_system_settings(pool_name: str) -> bool:
     """Configure system settings like locale,
