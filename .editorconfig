@@ -1,0 +1,56 @@
+
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Universal settings for all files
+[*]
+indent_style = space         # Use spaces for indentation, not tabs
+indent_size = 2              # Number of spaces for indentation (common for web dev)
+end_of_line = lf             # Use Unix-style line endings (LF)
+charset = utf-8              # Set character set to UTF-8
+trim_trailing_whitespace = true # Remove whitespace at the end of lines
+insert_final_newline = true  # Ensure files end with a newline character
+
+# Settings for Python files
+[*.py]
+indent_size = 4              # PEP 8 standard for Python
+max_line_length = 88         # Common line length for Python (e.g., Black formatter default)
+
+# Settings for JavaScript and TypeScript files
+[*.{js,jsx,ts,tsx,mjs,cjs}]
+# quote_type = single        # Some EditorConfig plugins support this, but it's not standard.
+
+# Settings for HTML, XML, SVG files
+[*.{html,xml,svg,vue}]
+
+# Settings for CSS, SCSS, Less files
+# block_comment_start = /*   # Example for block comments (often auto-detected)
+# block_comment_end = */
+
+# Settings for Markdown files
+[*.md]
+trim_trailing_whitespace = false # Trailing spaces can be significant in Markdown (e.g., for line breaks)
+max_line_length = off           # Don't enforce a max line length for Markdown content, let text flow.
+                                # Or set to a higher value like 120 if you prefer some wrapping.
+                                # For list items, etc.
+
+# Settings for YAML files
+
+# Settings for JSON files
+[*.json]             # JSON typically uses 2 spaces for readability
+                            # Note: JSON doesn't support comments, so these are for the editor.
+
+# Settings for Shell scripts
+[*.sh]             # Especially important for shell scripts
+
+# Settings for Makefiles (MUST use tabs)
+[Makefile]
+indent_style = tab
+indent_size = 4             # This is more about visual representation; Makefiles require actual tabs.
+                            # tab_width can also be used here if indent_size doesn't control tab display width
+tab_width = 4               # Specifies the width of a tab character.
+
+# Settings for configuration files that might use different styles
+[*.{ini,cfg,conf}]
