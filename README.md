@@ -1,15 +1,21 @@
 # KDE Neon ZFS Installer
 
-A Python installer script that replicates the functionality of Calamares but builds a KDE Neon system on a ZFS root using modern best practices and strict security defaults.
+A Python installer script that replicates the functionality of Calamares but builds a
+KDE Neon system on a ZFS root using modern best practices and strict security
+defaults.
 
 ## Features
 
 - **ZFS Root**: Installs KDE Neon on a ZFS root filesystem with modern best practices
-- **Secure Defaults**: Implements strict security defaults for SSH and system configuration
+- **Secure Defaults**: Implements strict security defaults for SSH and system
+  configuration
 - **User-Friendly**: Interactive prompts guide you through the installation process
-- **Flexible Disk Configuration**: Supports various ZFS pool types based on the number of disks
-- **Automated Setup**: Handles all aspects of installation from disk partitioning to user setup
-- **Modular Design**: Code is organized into logical modules for better maintainability
+- **Flexible Disk Configuration**: Supports various ZFS pool types based on the
+  number of disks
+- **Automated Setup**: Handles all aspects of installation from disk partitioning to
+  user setup
+- **Modular Design**: Code is organized into logical modules for better
+  maintainability
 
 ## Requirements
 
@@ -23,6 +29,7 @@ A Python installer script that replicates the functionality of Calamares but bui
 ### Required Commands
 
 The following commands must be available on the system:
+
 - zpool, zfs
 - sgdisk
 - mkfs.fat
@@ -77,7 +84,8 @@ The project is organized into the following modules:
 - **os_operations.py**: Functions for deploying the OS to the ZFS root
 - **kde_operations.py**: Functions for configuring KDE Neon
 - **user_operations.py**: Functions for setting up users and SSH
-- **system_operations.py**: Functions for checking prerequisites and configuring system settings
+- **system_operations.py**: Functions for checking prerequisites and configuring
+  system settings
 - **main.py**: Main function that orchestrates the installation process
 
 ## ZFS Features
