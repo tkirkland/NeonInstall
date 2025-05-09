@@ -106,7 +106,8 @@ def create_zfs_datasets(pool_name: str) -> bool:
         # Set up automatic snapshots
         if not _create_snapshot_service_files(pool_name):
             console.print(
-                "[bold yellow]Warning:[/bold yellow] Failed to create snapshot service files, but continuing with installation.")
+                "[bold yellow]Warning:[/bold yellow] Failed to create snapshot "
+                "service files, but continuing with installation.")
 
         # Create swap file
         mem_bytes = psutil.virtual_memory().total

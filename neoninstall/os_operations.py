@@ -171,12 +171,12 @@ def deploy_os(pool_name: str, efi_partition: str) -> bool:
         # Mount the ZFS datasets
         subprocess.run(["zfs", "mount", "-a"], check=True)
 
-        # Create mount point for EFI partition
+        # Create a mount point for EFI partition
         os.makedirs(f"/{pool_name}/ROOT/boot/efi", exist_ok=True)
 
         # Mount EFI partition
         subprocess.run(["mount", efi_partition, f"/{pool_name}/ROOT/boot/efi"],
-                       check=True)
+                        check=True)
 
         # Extract filesystem
         if not _extract_filesystem(pool_name):
@@ -191,7 +191,7 @@ def deploy_os(pool_name: str, efi_partition: str) -> bool:
         # Prepare for chroot
         for mount in ["/dev", "/proc", "/sys"]:
             subprocess.run(["mount", "--bind", mount, f"/{pool_name}/ROOT{mount}"],
-                           check=True)
+                            check=True)
 
         # Configure bootloader
         if not _configure_bootloader(pool_name):
@@ -202,11 +202,10 @@ def deploy_os(pool_name: str, efi_partition: str) -> bool:
         return True
     except subprocess.CalledProcessError as e:
         console.print(f"[bold red]Error:[/bold red] Failed to deploy OS: {e}")
-        return False
-    finally:
         # Cleanup mounts
         for mount in ["/sys", "/proc", "/dev"]:
             try:
                 subprocess.run(["umount", f"/{pool_name}/ROOT{mount}"], check=False)
+                return False
             except:
-                pass
+                return False
