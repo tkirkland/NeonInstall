@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-sudo.sh /path/to/your/venv/bin/python "$@"
+sudo.sh /home/neon/PycharmProjects/NeonInstall/.venv/bin/python "$@"
