@@ -168,7 +168,7 @@ def configure_system_settings(pool_name: str) -> bool:
         # Prepare for chroot
         for mount in ["/dev", "/proc", "/sys"]:
             subprocess.run(["mount", "--bind", mount, f"/{pool_name}/ROOT{mount}"],
-                           check=True)
+                            check=True)
 
         # Set locale to en_US.UTF-8
         with open(f"/{pool_name}/ROOT/etc/locale.gen", "a") as f:
@@ -183,7 +183,7 @@ def configure_system_settings(pool_name: str) -> bool:
         with open(f"/{pool_name}/ROOT/etc/default/locale", "w") as f:
             f.write('LANG="en_US.UTF-8"\n')
 
-        # Set keyboard layout to us
+        # Set the keyboard layout to us
         with open(f"/{pool_name}/ROOT/etc/default/keyboard", "w") as f:
             f.write("""XKBMODEL="pc105"
 XKBLAYOUT="us"
@@ -192,14 +192,14 @@ XKBOPTIONS=""
 BACKSPACE="guess"
 """)
 
-        # Set timezone to America/New_York
+        # Set a timezone to America/New_York
         chroot_cmd = [
             "chroot", f"/{pool_name}/ROOT",
             "ln", "-sf", "/usr/share/zoneinfo/America/New_York", "/etc/localtime"
         ]
         subprocess.run(chroot_cmd, check=True)
 
-        # Set hostname to precision
+        # Set the hostname to precision
         with open(f"/{pool_name}/ROOT/etc/hostname", "w") as f:
             f.write("precision\n")
 
@@ -214,7 +214,7 @@ ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
 """)
 
-        # Configure network for DHCP
+        # Configure a network for DHCP
         netplan_config = """network:
 version: 2
   renderer: networkd
@@ -233,11 +233,11 @@ version: 2
     except subprocess.CalledProcessError as e:
         console.print(
             f"[bold red]Error:[/bold red] Failed to configure system settings: {e}")
-        return False
-    finally:
         # Cleanup mounts
         for mount in ["/sys", "/proc", "/dev"]:
             try:
                 subprocess.run(["umount", f"/{pool_name}/ROOT{mount}"], check=False)
-            except:
-                pass
+            except IOError:
+                return False
+    return False
+
