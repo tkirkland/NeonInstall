@@ -219,7 +219,7 @@ def prompt_for_disk_selection(available_disks: List[Dict[str, Any]]) -> List[str
     Returns:
         List[str]: List of selected disk paths
     """
-    # First display the disk info with Rich formatting
+    # First, display the disk info with Rich formatting
     console.print("\nAvailable NVMe disks:")
     for i, disk in enumerate(available_disks):
         console.print(f"{i+1}. {disk['display']}")
@@ -342,7 +342,7 @@ def run_command(command: List[str]) -> str:
         return result.stdout
     except subprocess.CalledProcessError as e:
         # Include stderr in the error message for better debugging
-        error_message = f"Command {' '.join(command)} failed with error: {e.stderr}"
+        f"Command {' '.join(command)} failed with error: {e.stderr}"
         raise subprocess.CalledProcessError(e.returncode, e.cmd, e.output,
                                             e.stderr) from e
 
@@ -470,15 +470,15 @@ def _get_available_pool_types(disk_count: int) -> List[Dict[str, str]]:
         return [
             {"name": "Mirror (RAID1, 50% usable space)", "value": "mirror"},
             {"name": "Single disk (no redundancy, use second disk for separate pool)",
-             "value": "single"}
+            "value": "single"}
         ]
     else:  # disk_count >= 3
         pool_types = [
             {"name": f"RAIDZ1 (RAID5, {disk_count - 1}/{disk_count} usable space)",
-             "value": "raidz1"},
+            "value": "raidz1"},
             {"name": "Mirror (RAID1, 50% usable space)", "value": "mirror"},
             {"name": "Single disk (no redundancy, use other disks for separate pools)",
-             "value": "single"}
+            "value": "single"}
         ]
         if disk_count >= 4:
             pool_types.insert(1, {
@@ -491,7 +491,7 @@ def _prepare_disk_partitions(disks: List[str]) -> Tuple[bool, str]:
     """Create partitions on each disk and format EFI partition on the first disk."""
     for disk in disks:
         try:
-            # First wipe the disk completely to ensure clean state
+            # First, wipe the disk completely to ensure a clean state
             run_command(["wipefs", "--all", disk])
 
             # Create a GPT partition table
@@ -509,11 +509,11 @@ def _prepare_disk_partitions(disks: List[str]) -> Tuple[bool, str]:
                 "--change-name=2:ZFS", disk
             ])
 
-            # Force kernel to re-read partition table
+            # Force kernel to re-read the partition table
             try:
                 run_command(["partprobe", disk])
             except subprocess.CalledProcessError:
-                # If partprobe fails, try the old-school method
+                # If part probe fails, try the old-school method
                 try:
                     run_command(["blockdev", "--rereadpt", disk])
                 except subprocess.CalledProcessError:
