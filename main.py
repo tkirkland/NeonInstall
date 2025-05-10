@@ -62,7 +62,7 @@ def main():
         console.print("[bold red]Failed to configure KDE Neon. Exiting.[/bold red]")
         return 1
 
-    # Set up user
+    # Set up a user
     if not setup_user(pool_name):
         console.print("[bold red]Failed to set up user. Exiting.[/bold red]")
         return 1
@@ -81,7 +81,7 @@ def main():
     console.print("[bold green]Installation completed successfully![/bold green]")
     console.print("You can now reboot into your new KDE Neon system.")
     console.print("Username: me")
-    console.print("Password: changeme")
+    console.print("Password: change")
     console.print(
         "[bold yellow]Don't forget to change the password after first login![/bold yellow]")
 
