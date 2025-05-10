@@ -11,6 +11,7 @@ pyyaml = "^6.0"
 questionary = "^2.0.1"
 psutil = "^5.9.5"
 rich = "^13.4.2"
+pyparted = "^3.12.0"
 
 
 [build-system]

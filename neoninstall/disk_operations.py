@@ -5,20 +5,22 @@ This module contains functions for disk-related operations such as
 selecting disks and creating ZFS pools.
 """
 
+import json
+import os
+import re
 import subprocess
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import questionary
 from rich.console import Console
+from rich.table import Table
 
 # Initialize a rich console for colored output
 console = Console()
 
 # Constants
-LSBLK_DISK_FIELDS = ["NAME", "SIZE", "MODEL", "FSTYPE"]
-LSBLK_PARTITION_FIELDS = ["FSTYPE"]
-NVME_PREFIX = "nvme"
 DISK_PATH_PREFIX = "/dev/"
+NVME_PREFIX = "nvme"
 UNKNOWN_MODEL = "Unknown"
 NONE_FS = "None"
 
@@ -32,18 +34,70 @@ def select_disks() -> List[str]:
     """
     available_disks = get_available_nvme_disks()
     if not available_disks:
+        console.print("[bold red]Error:[/bold red] No NVMe disks found.")
         return []
 
     selected_disks = prompt_for_disk_selection(available_disks)
     if not selected_disks:
+        console.print("No disks selected.")
         return []
 
     disks_with_filesystems = identify_disks_with_filesystems(selected_disks)
     if disks_with_filesystems and not handle_existing_filesystems(
-            disks_with_filesystems):
+        disks_with_filesystems):
         return []
 
     return selected_disks
+
+
+def get_disk_size(disk_path: str) -> str:
+    """Get the size of a disk in human-readable format"""
+    try:
+        size_output = run_command(["lsblk", "-d", "-b", "-o", "SIZE", disk_path])
+        if size_output.strip():
+            size_bytes = int(size_output.strip().split('\n')[1])
+            return f"{size_bytes / (1024**3):.1f}G"
+    except (subprocess.SubprocessError, ValueError, IndexError):
+        pass
+    return "Unknown"
+
+
+def get_disk_model(disk_path: str) -> str:
+    """Get the model name of a disk"""
+    try:
+        model_output = run_command(["lsblk", "-d", "-o", "MODEL", disk_path])
+        if model_output.strip():
+            return model_output.strip().split('\n')[1].strip()
+    except (subprocess.SubprocessError, IndexError):
+        pass
+    return UNKNOWN_MODEL
+
+
+def get_disk_filesystems(disk_path: str) -> Dict[str, str]:
+    """Get filesystem information for all partitions on a disk"""
+    filesystems = {}
+    try:
+        parts_output = run_command(["lsblk", "-n", "-o", "NAME,FSTYPE", disk_path])
+        for line in parts_output.strip().split('\n'):
+            if not line.strip():
+                continue
+            parts = line.split()
+            if len(parts) >= 2 and parts[1].strip():
+                fs_type = parts[1].strip()
+                part_name = f"/dev/{parts[0].strip()}"
+                if fs_type == "ntfs":
+                    fs_type = "ntfs (Windows)"
+                filesystems[part_name] = fs_type
+    except subprocess.SubprocessError:
+        pass
+    return filesystems
+
+
+def format_filesystem_description(filesystems: Dict[str, str]) -> str:
+    """Format filesystem information into a readable string"""
+    if not filesystems:
+        return ""
+    return ", ".join([f"{os.path.basename(p)}: {fs}" for p, fs in filesystems.items()])
 
 
 def get_available_nvme_disks() -> List[Dict[str, Any]]:
@@ -51,20 +105,53 @@ def get_available_nvme_disks() -> List[Dict[str, Any]]:
     Get a list of available NVMe disks with their details.
 
     Returns:
-        List[Dict[str, Any]]: List of disk info dictionaries with 'name' and 'value' keys
+        List[Dict[str, Any]]: List of disk info dictionaries
     """
     nvme_disks = []
+
     try:
-        lsblk_output = run_command(
-            ["lsblk", "-d", "-n", "-o", ",".join(LSBLK_DISK_FIELDS)]
-        )
+        # Get NVMe devices and sort them naturally
+        nvme_devices = [d for d in os.listdir('/dev') if d.startswith(NVME_PREFIX) and re.match(r'nvme\d+n\d+$', d)]
+        nvme_devices.sort(key=lambda x: [int(n) for n in re.findall(r'\d+', x)])
 
-        for line in lsblk_output.splitlines():
-            disk_info = parse_disk_info(line)
-            if disk_info:
-                nvme_disks.append(disk_info)
+        for device in nvme_devices:
+            disk_path = f"{DISK_PATH_PREFIX}{device}"
 
-    except subprocess.CalledProcessError as e:
+            # Get disk information
+            size = get_disk_size(disk_path)
+            model = get_disk_model(disk_path)
+            filesystems = get_disk_filesystems(disk_path)
+            fs_desc = format_filesystem_description(filesystems)
+
+            # Basic disk information
+            basic_info = f"{disk_path} ({size}, {model})"
+
+            # Create display info with Rich formatting
+            display_info = basic_info
+            if filesystems:
+                display_info += f" - [red]Has filesystem(s): {fs_desc}[/red]"
+            else:
+                display_info += f" - [green]No formatted partitions[/green]"
+
+            # Create clean disk info without Rich formatting
+            clean_info = basic_info
+            if filesystems:
+                clean_info += f" - Has filesystem(s): {fs_desc}"
+            else:
+                clean_info += " - No formatted partitions"
+
+            # Create the disk info dictionary
+            disk_info = {
+                "name": clean_info,
+                "value": disk_path,
+                "display": display_info,
+                "size": size,
+                "model": model,
+                "filesystems": filesystems
+            }
+            nvme_disks.append(disk_info)
+
+    except (OSError, subprocess.SubprocessError) as e:
         console.print(f"[bold red]Error:[/bold red] Failed to list disks: {e}")
         return []
 
@@ -74,31 +161,52 @@ def get_available_nvme_disks() -> List[Dict[str, Any]]:
     return nvme_disks
 
 
-def parse_disk_info(line: str) -> Optional[Dict[str, str]]:
+def get_filesystem_info(disk_path: str) -> Dict[str, str]:
     """
-    Parse disk information from a line of lsblk output.
+    Get filesystem information for a disk and all its partitions.
 
     Args:
-        line: A line from lsblk output
+        disk_path: Path to the disk
 
     Returns:
-        Optional[Dict[str, str]]: Disk information dictionary or None if not an NVMe disk
+        Dict[str, str]: Dictionary mapping partition paths to filesystem types
     """
-    parts = line.split()
-    if len(parts) >= 2 and parts[0].startswith(NVME_PREFIX):
-        disk_name = parts[0]
-        disk_size = parts[1]
-        disk_model = " ".join(parts[2:-1]) if len(parts) > 3 else UNKNOWN_MODEL
-        fs_type = parts[-1] if len(parts) > 2 else NONE_FS
+    fs_info = {}
 
-        disk_path = f"{DISK_PATH_PREFIX}{disk_name}"
-        disk_info = f"{disk_path} ({disk_size}, {disk_model})"
+    try:
+        # Get all partitions for this disk
+        lsblk_output = run_command([
+            "lsblk", "-o", "NAME,KNAME,FSTYPE", "-J", "-p", disk_path
+        ])
 
-        if fs_type != NONE_FS:
-            disk_info += f" - [red]Has filesystem: {fs_type}[/red]"
+        try:
+            device_data = json.loads(lsblk_output)
+        except json.JSONDecodeError:
+            return fs_info
 
-        return {"name": disk_info, "value": disk_path}
-    return None
+        if 'blockdevices' not in device_data or not device_data['blockdevices']:
+            return fs_info
+
+        # Process the disk and its children (partitions)
+        device = device_data['blockdevices'][0]
+
+        # Check if the main disk has a filesystem
+        if 'fstype' in device and device['fstype']:
+            fs_info[device['kname']] = device['fstype']
+
+        # Check all partitions
+        if 'children' in device:
+            for partition in device['children']:
+                if 'fstype' in partition and partition['fstype']:
+                    fs_info[partition['kname']] = partition['fstype']
+
+    except (subprocess.SubprocessError, KeyError, IndexError) as e:
+        console.print(
+            f"[bold yellow]Warning:[/bold yellow] Failed to get filesystem info for {disk_path}: {e}")
+
+    return fs_info
+
+
 
 
 def prompt_for_disk_selection(available_disks: List[Dict[str, Any]]) -> List[str]:
@@ -111,9 +219,17 @@ def prompt_for_disk_selection(available_disks: List[Dict[str, Any]]) -> List[str
     Returns:
         List[str]: List of selected disk paths
     """
+    # First display the disk info with Rich formatting
+    console.print("\nAvailable NVMe disks:")
+    for i, disk in enumerate(available_disks):
+        console.print(f"{i+1}. {disk['display']}")
+
+    console.print()  # Add a blank line for better readability
+
+    # Then use questionary with clean text
     return questionary.checkbox(
         "Select NVMe disks for installation:",
-        choices=available_disks
+        choices=[{"name": disk["name"], "value": disk["value"]} for disk in available_disks]
     ).ask()
 
 
@@ -128,18 +244,11 @@ def identify_disks_with_filesystems(disks: List[str]) -> List[str]:
         List[str]: List of disk paths that have filesystems
     """
     disks_with_fs = []
-    for disk in disks:
-        try:
-            fs_output = run_command(
-                ["lsblk", "-n", "-o", ",".join(LSBLK_PARTITION_FIELDS), disk]
-            )
 
-            for line in fs_output.splitlines():
-                if line.strip() and line.strip() != NONE_FS:
-                    disks_with_fs.append(disk)
-                    break
-        except subprocess.CalledProcessError:
-            pass
+    for disk in disks:
+        fs_info = get_filesystem_info(disk)
+        if fs_info:
+            disks_with_fs.append(disk)
 
     return disks_with_fs
 
@@ -156,10 +265,16 @@ def handle_existing_filesystems(disks_with_fs: List[str]) -> bool:
     """
     console.print(
         "[bold yellow]Warning:[/bold yellow] The following disks have existing filesystems:")
+
+    # Show detailed filesystem information for each disk
     for disk in disks_with_fs:
         console.print(f"  - {disk}")
+        fs_info = get_filesystem_info(disk)
+        for part, fs_type in fs_info.items():
+            console.print(f"    {part}: {fs_type}")
 
-    if questionary.confirm("Do you want to wipe these disks?").ask():
+    if questionary.confirm(
+        "Do you want to wipe these disks? [THIS WILL DESTROY ALL DATA]").ask():
         if wipe_disks(disks_with_fs):
             console.print("[bold green]Disks wiped successfully.[/bold green]")
             return True
@@ -182,9 +297,23 @@ def wipe_disks(disks: List[str]) -> bool:
     for disk in disks:
         try:
             console.print(f"Wiping disk {disk}...")
+
+            # First attempt to wipe any existing partition table signatures using wipefs
+            try:
+                run_command(["wipefs", "--all", disk])
+            except subprocess.SubprocessError as e:
+                console.print(
+                    f"[bold yellow]Warning:[/bold yellow] Failed to run wipefs on {disk}: {e}")
+
+            # Then use sgdisk to completely wipe the partition table
             run_command(["sgdisk", "--zap-all", disk])
-        except subprocess.CalledProcessError as e:
-            console.print(f"[bold red]Error:[/bold red] Failed to wipe disk {disk}: {e}")
+
+            # Sync to ensure changes are written
+            run_command(["sync"])
+
+        except subprocess.SubprocessError as e:
+            console.print(
+                f"[bold red]Error:[/bold red] Failed to wipe disk {disk}: {e}")
             return False
     return True
 
@@ -202,13 +331,20 @@ def run_command(command: List[str]) -> str:
     Raises:
         subprocess.CalledProcessError: If the command fails
     """
-    result = subprocess.run(
-        command,
-        check=True,
-        stdout=subprocess.PIPE,
-        text=True
-    )
-    return result.stdout
+    try:
+        result = subprocess.run(
+            command,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        # Include stderr in the error message for better debugging
+        error_message = f"Command {' '.join(command)} failed with error: {e.stderr}"
+        raise subprocess.CalledProcessError(e.returncode, e.cmd, e.output,
+                                            e.stderr) from e
 
 
 def _create_trim_service_files(pool_name: str) -> bool:
@@ -292,7 +428,8 @@ def create_zfs_pool(disks: List[str]) -> Tuple[bool, str, str]:
                                                  zfs_partitions)
 
     try:
-        subprocess.run(pool_create_cmd, check=True)
+        console.print(f"Creating ZFS pool with command: {' '.join(pool_create_cmd)}")
+        run_command(pool_create_cmd)
         console.print(
             f"[bold green]ZFS pool '{pool_name}' created successfully.[/bold green]")
 
@@ -354,37 +491,75 @@ def _prepare_disk_partitions(disks: List[str]) -> Tuple[bool, str]:
     """Create partitions on each disk and format EFI partition on the first disk."""
     for disk in disks:
         try:
+            # First wipe the disk completely to ensure clean state
+            run_command(["wipefs", "--all", disk])
+
             # Create a GPT partition table
-            subprocess.run(["sgdisk", "--zap-all", disk], check=True)
+            run_command(["sgdisk", "--zap-all", disk])
 
             # Create EFI partition (1024 MB)
-            subprocess.run([
+            run_command([
                 "sgdisk", "--new=1:0:+1024M", "--typecode=1:EF00",
                 "--change-name=1:EFI", disk
-            ], check=True)
+            ])
 
             # Create ZFS partition (rest of disk)
-            subprocess.run([
+            run_command([
                 "sgdisk", "--new=2:0:0", "--typecode=2:BF01",
                 "--change-name=2:ZFS", disk
-            ], check=True)
+            ])
+
+            # Force kernel to re-read partition table
+            try:
+                run_command(["partprobe", disk])
+            except subprocess.CalledProcessError:
+                # If partprobe fails, try the old-school method
+                try:
+                    run_command(["blockdev", "--rereadpt", disk])
+                except subprocess.CalledProcessError:
+                    # If both fail, warn but continue
+                    console.print(
+                        f"[bold yellow]Warning:[/bold yellow] Failed to reread partition table on {disk}")
+
+            # Sync to ensure changes are written
+            run_command(["sync"])
+
         except subprocess.CalledProcessError as e:
             console.print(
                 f"[bold red]Error:[/bold red] Failed to create partitions on {disk}: {e}")
             return False, ""
 
+    # Allow system time to recognize new partitions
+    import time
+    time.sleep(2)
+
     # Format EFI partition on the first disk
     efi_partition = f"{disks[0]}1"
+
+    # Wait for the partition to be available
+    max_retries = 5
+    for attempt in range(max_retries):
+        if os.path.exists(efi_partition):
+            break
+        console.print(
+            f"Waiting for EFI partition {efi_partition} to appear (attempt {attempt + 1}/{max_retries})...")
+        time.sleep(2)
+
+    if not os.path.exists(efi_partition):
+        console.print(
+            f"[bold red]Error:[/bold red] EFI partition {efi_partition} was not created.")
+        return False, ""
+
     try:
-        subprocess.run(["mkfs.fat", "-F32", "-n", "EFI", efi_partition], check=True)
+        run_command(["mkfs.fat", "-F32", "-n", "EFI", efi_partition])
         return True, efi_partition
     except subprocess.CalledProcessError as e:
-        console.print(f"[bold red]Error:[/bold red] Failed to format EFI partition: {e}")
+        console.print(
+            f"[bold red]Error:[/bold red] Failed to format EFI partition: {e}")
         return False, ""
 
 
 def _build_pool_create_command(pool_type: str, pool_name: str, disks: List[str],
-                               # Create ZFS pool
                                zfs_partitions: List[str]) -> List[str]:
     """Build the zpool create a command based on a pool type."""
     pool_create_cmd = ["zpool", "create", "-f"]
@@ -457,8 +632,40 @@ def enable_pool_autotrim(pool_name: str) -> bool:
         bool: True if TRIM was enabled successfully, False otherwise
     """
     try:
-        subprocess.run(["zpool", "set", "autotrim=on", pool_name], check=True)
+        run_command(["zpool", "set", "autotrim=on", pool_name])
         return True
     except subprocess.CalledProcessError as e:
         console.print(f"[bold yellow]Warning:[/bold yellow] Failed to enable TRIM: {e}")
         return False
+
+def display_disk_info(disks: List[Dict[str, Any]]) -> None:
+    """
+    Display disk information in a formatted table.
+
+    Args:
+        disks: List of disk information dictionaries
+    """
+    table = Table(title="Available NVMe Disks")
+
+    table.add_column("Device", style="cyan")
+    table.add_column("Size", style="magenta")
+    table.add_column("Model", style="green")
+    table.add_column("Filesystems", style="red")
+
+    for disk in disks:
+        fs_display = "[green]No formatted partitions[/green]"
+        if disk.get('filesystems'):
+            fs_parts = []
+            for part, fs_type in disk['filesystems'].items():
+                part_name = os.path.basename(part)
+                fs_parts.append(f"{part_name}: {fs_type}")
+            fs_display = "[red]" + ", ".join(fs_parts) + "[/red]"
+
+        table.add_row(
+            os.path.basename(disk['value']),
+            disk['size'],
+            disk['model'],
+            fs_display
+        )
+
+    console.print(table)
