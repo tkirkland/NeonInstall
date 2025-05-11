@@ -19,11 +19,9 @@ indent_size = 4              # PEP 8 standard for Python
 max_line_length = 88         # Common line length for Python (e.g., Black formatter default)
 
 # Settings for JavaScript and TypeScript files
-[*.{js,jsx,ts,tsx,mjs,cjs}]
 # quote_type = single        # Some EditorConfig plugins support this, but it's not standard.
 
 # Settings for HTML, XML, SVG files
-[*.{html,xml,svg,vue}]
 
 # Settings for CSS, SCSS, Less files
 # block_comment_start = /*   # Example for block comments (often auto-detected)
@@ -39,11 +37,12 @@ max_line_length = off           # Don't enforce a max line length for Markdown c
 # Settings for YAML files
 
 # Settings for JSON files
-[*.json]             # JSON typically uses 2 spaces for readability
-                            # Note: JSON doesn't support comments, so these are for the editor.
+# JSON typically uses 2 spaces for readability
+                                # Note: JSON doesn't support comments, so these are for the editor.
 
 # Settings for Shell scripts
 [*.sh]             # Especially important for shell scripts
+max_line_length = 80
 
 # Settings for Makefiles (MUST use tabs)
 [Makefile]
@@ -53,4 +52,3 @@ indent_size = 4             # This is more about visual representation; Makefile
 tab_width = 4               # Specifies the width of a tab character.
 
 # Settings for configuration files that might use different styles
-[*.{ini,cfg,conf}]
